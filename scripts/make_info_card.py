@@ -14,7 +14,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "info-card.svg")
 STATIC = bool(os.environ.get("STATIC"))
 
-W, H = 860, 376
+W, H = 860, 440
 PAD = 20
 TITLEBAR_H = 30
 KEY_X = PAD
@@ -44,10 +44,13 @@ ROWS = [
     ("kv", "Location", "Chennai, India"),
     ("gap",),
     ("sec", "Stack"),
-    ("kv", "Languages", "JS, TS, Python, Java, C++, Solidity"),
-    ("kv", "Web Dev", "React.js, Node.js, Express.js, Tailwind"),
+    ("kv", "Languages", "C, C++, JavaScript, TS, Python, Java, Solidity, HTML, CSS"),
+    ("kv", "Web Dev", "React.js, Node.js, Express.js, Tailwind, Firebase"),
     ("kv", "Database", "PostgreSQL, MongoDB, Supabase, MySQL"),
     ("kv", "Web3", "Solidity, Ethers.js, Hardhat"),
+    ("gap",),
+    ("sec", "Tools"),
+    ("kv", "DevOps/VC", "Git, GitHub, Docker, Postman, Linux"),
     ("gap",),
     ("sec", "Projects"),
     ("bul", "Autom8: AI automata learning platform"),
