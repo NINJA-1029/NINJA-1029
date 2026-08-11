@@ -3,7 +3,7 @@ Build a unified neofetch-style info card + RPG Developer Level & XP System SVG
 in a SINGLE terminal window container.
 
 Top half: Original info card (Edu, Focus, Location, Stack, Tools, Projects).
-Bottom half: RPG Developer Level (Level, Title, XP progress bar, Streak Buff, Activity totals).
+Bottom half: Expanded RPG Developer Level & Titles (Level, Title, XP progress bar, Streak Buff, Activity totals).
 
 Reads real GitHub contribution data from data/contributions.json.
 Runs daily via .github/workflows/update-profile-art.yml.
@@ -64,9 +64,23 @@ def calculate_rpg_stats():
     next_level_xp = 100
     level_pct = round((xp_in_level / next_level_xp) * 100, 1)
 
-    # Class Titles
-    if level >= 20:
+    # Extended Class Titles Hierarchy (Spanning Lvl 1 to Lvl 100+)
+    if level >= 100:
         title = "Grandmaster Architect"
+    elif level >= 90:
+        title = "Mythic Engineer"
+    elif level >= 70:
+        title = "Singularity Architect"
+    elif level >= 50:
+        title = "Quantum Developer"
+    elif level >= 40:
+        title = "Kernel Master"
+    elif level >= 30:
+        title = "Protocol Engineer"
+    elif level >= 25:
+        title = "Algorithm Specialist"
+    elif level >= 20:
+        title = "Cyber Specialist"
     elif level >= 15:
         title = "Systems Architect"
     elif level >= 10:
