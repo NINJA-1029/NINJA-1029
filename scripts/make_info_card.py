@@ -1,9 +1,9 @@
 """
-Build a unified neofetch-style info card + streak & contribution graph SVG
+Build a unified neofetch-style info card + streak & consistency meter SVG
 in a SINGLE terminal window container.
 
 Top half: Original info card (Edu, Focus, Location, Stack, Tools, Projects).
-Bottom half: Streak metrics, 32-week contribution heatmap grid, and activity totals.
+Bottom half: Streak metrics, Consistency Meter (terminal progress bar + rank), and Activity totals.
 
 Reads real GitHub contribution data from data/contributions.json.
 Runs daily via .github/workflows/update-profile-art.yml.
@@ -22,7 +22,7 @@ W = 860
 PAD = 20
 TITLEBAR_H = 30
 KEY_X = PAD
-VAL_X = PAD + 92
+VAL_X = PAD + 115
 LINE_H = 20.5
 
 BG = "#0d1117"
@@ -36,31 +36,17 @@ GREEN = "#3fb950"
 ACCENT = "#22d3ee"
 GOLD = "#f2cc60"
 
-LEVELS = ["#161b22", "#0e4429", "#006d32", "#26a641", "#39d353"]
-
-
-def level_for(count):
-    if count == 0:
-        return 0
-    if count <= 5:
-        return 1
-    if count <= 15:
-        return 2
-    if count <= 30:
-        return 3
-    return 4
-
 
 def esc(s):
     return html.escape(str(s))
 
 
-def load_contributions():
+def load_stats():
     cur_streak = 0
     long_streak = 0
     active_days = 0
     total_contribs = 0
-    days_list = []
+    days_count = 365
 
     if os.path.exists(DATA_PATH):
         try:
@@ -71,40 +57,31 @@ def load_contributions():
                 active_days = d.get("active_days", 0)
                 total_contribs = d.get("total_contributions", 0)
                 days_list = d.get("days", [])
+                if days_list:
+                    days_count = len(days_list)
         except Exception:
             pass
 
-    WEEKS, DAYS = 32, 7
-    needed_days = WEEKS * DAYS
-    recent_days = days_list[-needed_days:] if len(days_list) >= needed_days else days_list
+    consistency_pct = round((active_days / max(1, days_count)) * 100, 1)
 
-    grid = [[0 for _ in range(WEEKS)] for _ in range(DAYS)]
-    months_labels = {}
-
-    if recent_days:
-        first_date = datetime.date.fromisoformat(recent_days[0]["date"])
-        start_dow = (first_date.weekday() + 1) % 7
-
-        idx = 0
-        for w in range(WEEKS):
-            for d in range(DAYS):
-                if w == 0 and d < start_dow:
-                    continue
-                if idx < len(recent_days):
-                    item = recent_days[idx]
-                    grid[d][w] = level_for(item["count"])
-                    dt = datetime.date.fromisoformat(item["date"])
-                    if dt.day <= 7 and w not in months_labels:
-                        months_labels[w] = dt.strftime("%b").upper()
-                    idx += 1
+    # Rank calculation
+    if consistency_pct >= 85:
+        rank = "S-Rank"
+    elif consistency_pct >= 70:
+        rank = "A-Rank"
+    elif consistency_pct >= 50:
+        rank = "B-Rank"
+    else:
+        rank = "Active"
 
     return {
         "cur_streak": cur_streak,
         "long_streak": long_streak,
         "active_days": active_days,
         "total_contribs": total_contribs,
-        "grid": grid,
-        "months": months_labels,
+        "days_count": days_count,
+        "consistency_pct": consistency_pct,
+        "rank": rank,
     }
 
 
@@ -118,15 +95,15 @@ def rise(inner, delay):
 
 
 def make_svg():
-    cdata = load_contributions()
-    cur_streak = cdata["cur_streak"]
-    long_streak = cdata["long_streak"]
-    active_days = cdata["active_days"]
-    total_contribs = cdata["total_contribs"]
-    grid = cdata["grid"]
-    months = cdata["months"]
+    stats = load_stats()
+    cur_streak = stats["cur_streak"]
+    long_streak = stats["long_streak"]
+    active_days = stats["active_days"]
+    total_contribs = stats["total_contribs"]
+    consistency_pct = stats["consistency_pct"]
+    rank = stats["rank"]
 
-    # Top Half: Original Info Card Content
+    # Top Half: Original Info Card Content (Untouched)
     TOP_ROWS = [
         ("host",),
         ("kv", "Edu", "B.Tech CSE, VIT Chennai '28"),
@@ -149,7 +126,7 @@ def make_svg():
         ("bul", "SnapFit: AI size recommender platform"),
     ]
 
-    H = 715
+    H = 590
 
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" '
@@ -170,7 +147,7 @@ def make_svg():
     y = TITLEBAR_H + 30
     row_idx = 0
 
-    # Render Top Half
+    # Render Top Half (Original Info Card)
     for row in TOP_ROWS:
         kind = row[0]
         if kind == "gap":
@@ -203,101 +180,48 @@ def make_svg():
         row_idx += 1
         y += LINE_H
 
-    # Bottom Half: Streak & Contributions Section (Seamless continuation!)
-    y += 8
-    # — Streak section
+    # Bottom Half: Streak & Consistency Meter (No duplicate header, seamless flow!)
+    y += 10
+
+    # — Streak & Consistency section header
     inner_streak_sec = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{SECTION}" font-size="12.5" font-weight="700">'
-                        f'&#8212; Streak</text>'
-                        f'<line x1="{KEY_X + 70}" y1="{y-4:.1f}" x2="{W-PAD}" y2="{y-4:.1f}" '
+                        f'&#8212; Streak &amp; Consistency</text>'
+                        f'<line x1="{KEY_X + 165}" y1="{y-4:.1f}" x2="{W-PAD}" y2="{y-4:.1f}" '
                         f'stroke="{FRAME}" stroke-opacity="0.8"/>')
     parts.append(rise(inner_streak_sec, 0.10 + row_idx * 0.04))
     row_idx += 1
     y += 24
 
-    # Current streak row + progress bar
-    bar_w = int(180 * min(1.0, cur_streak / max(1, long_streak)))
-    inner_cur = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">Current</text>'
-                 f'<text x="{VAL_X}" y="{y:.1f}" fill="{INK}" font-size="12.5">{cur_streak} days</text>'
-                 f'<rect x="270" y="{y-11:.1f}" width="180" height="13" rx="2" fill="#21262d"/>'
-                 f'<rect x="270" y="{y-11:.1f}" width="{bar_w}" height="13" rx="2" fill="{GREEN}"/>')
+    # Current streak row + streak bar
+    bar_w = int(200 * min(1.0, cur_streak / max(1, long_streak)))
+    inner_cur = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">Streak</text>'
+                 f'<text x="{VAL_X}" y="{y:.1f}" fill="{INK}" font-size="12.5">'
+                 f'🔥 {cur_streak} days current  ·  ⚡ {long_streak} days longest</text>')
     parts.append(rise(inner_cur, 0.10 + row_idx * 0.04))
     row_idx += 1
-    y += 22
+    y += 24
 
-    # Longest streak
-    inner_long = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">Longest</text>'
-                  f'<text x="{VAL_X}" y="{y:.1f}" fill="{INK}" font-size="12.5">{long_streak} days</text>')
-    parts.append(rise(inner_long, 0.10 + row_idx * 0.04))
+    # Consistency Meter Progress Bar
+    bar_total_w = 260
+    filled_w = int(bar_total_w * min(1.0, consistency_pct / 100.0))
+
+    inner_meter = (
+        f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">Consistency</text>'
+        f'<rect x="{VAL_X}" y="{y-11:.1f}" width="{bar_total_w}" height="13" rx="3" fill="#21262d"/>'
+        f'<rect x="{VAL_X}" y="{y-11:.1f}" width="{filled_w}" height="13" rx="3" fill="{GREEN}"/>'
+        f'<text x="{VAL_X + bar_total_w + 14}" y="{y:.1f}" font-size="12.5">'
+        f'<tspan fill="{ACCENT}" font-weight="700">{consistency_pct}%</tspan> '
+        f'<tspan fill="{GOLD}">({rank})</tspan></text>'
+    )
+    parts.append(rise(inner_meter, 0.10 + row_idx * 0.04))
     row_idx += 1
-    y += 22
+    y += 24
 
-    # Active days
-    inner_act = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">Active</text>'
-                 f'<text x="{VAL_X}" y="{y:.1f}" fill="{INK}" font-size="12.5">{active_days} days this year</text>')
+    # Activity Summary
+    inner_act = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">Activity</text>'
+                 f'<text x="{VAL_X}" y="{y:.1f}" fill="{INK}" font-size="12.5">'
+                 f'{total_contribs:,} contributions across {active_days} active days this year</text>')
     parts.append(rise(inner_act, 0.10 + row_idx * 0.04))
-    row_idx += 1
-    y += 28
-
-    # — Contributions section
-    inner_contrib_sec = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{SECTION}" font-size="12.5" font-weight="700">'
-                         f'&#8212; Contributions</text>'
-                         f'<line x1="{KEY_X + 115}" y1="{y-4:.1f}" x2="{W-PAD}" y2="{y-4:.1f}" '
-                         f'stroke="{FRAME}" stroke-opacity="0.8"/>')
-    parts.append(rise(inner_contrib_sec, 0.10 + row_idx * 0.04))
-    row_idx += 1
-    y += 18
-
-    # Heatmap Grid
-    cell, gap = 10, 3
-    sx, sy = VAL_X, y + 10
-
-    heatmap_parts = [f'<text x="{VAL_X}" y="{y+4}" fill="{MUTED}" font-size="9">RECENT ACTIVITY</text>']
-
-    for week, month in months.items():
-        mx = sx + week * (cell + gap)
-        heatmap_parts.append(f'<text x="{mx}" y="{sy - 3}" fill="{MUTED}" font-size="8">{month}</text>')
-
-    for day_i, label in {1: "M", 3: "W", 5: "F"}.items():
-        dy = sy + day_i * (cell + gap) + 8
-        heatmap_parts.append(f'<text x="{VAL_X - 15}" y="{dy}" fill="{MUTED}" font-size="8">{label}</text>')
-
-    for d in range(7):
-        for w in range(32):
-            cx = sx + w * (cell + gap)
-            cy = sy + d * (cell + gap)
-            lvl = grid[d][w]
-            heatmap_parts.append(f'<rect x="{cx}" y="{cy}" width="{cell}" height="{cell}" '
-                                 f'rx="2" fill="{LEVELS[lvl]}"/>')
-
-    leg_y = sy + 7 * (cell + gap) + 6
-    heatmap_parts.append(f'<text x="{VAL_X}" y="{leg_y + 8}" fill="{MUTED}" font-size="9">Less</text>')
-    for i, color in enumerate(LEVELS):
-        lx = VAL_X + 30 + i * 15
-        heatmap_parts.append(f'<rect x="{lx}" y="{leg_y}" width="10" height="10" rx="2" fill="{color}"/>')
-    heatmap_parts.append(f'<text x="{VAL_X + 110}" y="{leg_y + 8}" fill="{MUTED}" font-size="9">More</text>')
-
-    parts.append(rise("".join(heatmap_parts), 0.10 + row_idx * 0.04))
-    row_idx += 1
-    y = leg_y + 32
-
-    # — Activity Totals section
-    inner_act_tot = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{SECTION}" font-size="12.5" font-weight="700">'
-                     f'&#8212; Activity</text>'
-                     f'<line x1="{KEY_X + 80}" y1="{y-4:.1f}" x2="{W-PAD}" y2="{y-4:.1f}" '
-                     f'stroke="{FRAME}" stroke-opacity="0.8"/>')
-    parts.append(rise(inner_act_tot, 0.10 + row_idx * 0.04))
-    row_idx += 1
-    y += 22
-
-    inner_tot = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">Total Contribs</text>'
-                 f'<text x="{VAL_X + 40}" y="{y:.1f}" fill="{INK}" font-size="12.5">{total_contribs:,}</text>')
-    parts.append(rise(inner_tot, 0.10 + row_idx * 0.04))
-    row_idx += 1
-    y += 22
-
-    inner_act_d = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">Active Days</text>'
-                   f'<text x="{VAL_X + 40}" y="{y:.1f}" fill="{INK}" font-size="12.5">{active_days} days this year</text>')
-    parts.append(rise(inner_act_d, 0.10 + row_idx * 0.04))
 
     parts.append("</svg>")
     return "".join(parts)
