@@ -1,9 +1,9 @@
 """
-Build a unified neofetch-style info card + streak & consistency meter SVG
+Build a unified neofetch-style info card + RPG Developer Level & XP System SVG
 in a SINGLE terminal window container.
 
 Top half: Original info card (Edu, Focus, Location, Stack, Tools, Projects).
-Bottom half: Streak metrics, Consistency Meter (terminal progress bar + rank), and Activity totals.
+Bottom half: RPG Developer Level (Level, Title, XP progress bar, Streak Buff, Activity totals).
 
 Reads real GitHub contribution data from data/contributions.json.
 Runs daily via .github/workflows/update-profile-art.yml.
@@ -34,18 +34,18 @@ SECTION = "#58a6ff"  # blue section headers
 GREEN = "#3fb950"
 ACCENT = "#22d3ee"
 GOLD = "#f2cc60"
+PURPLE = "#a371f7"
 
 
 def esc(s):
     return html.escape(str(s))
 
 
-def load_stats():
+def calculate_rpg_stats():
     cur_streak = 0
     long_streak = 0
     active_days = 0
-    total_contribs = 0
-    days_count = 365
+    total_xp = 0
 
     if os.path.exists(DATA_PATH):
         try:
@@ -54,44 +54,52 @@ def load_stats():
                 cur_streak = d.get("current_streak", {}).get("length", 0)
                 long_streak = d.get("longest_streak", {}).get("length", 0)
                 active_days = d.get("active_days", 0)
-                total_contribs = d.get("total_contributions", 0)
-                days_list = d.get("days", [])
-                if days_list:
-                    days_count = len(days_list)
+                total_xp = d.get("total_contributions", 0)
         except Exception:
             pass
 
-    consistency_pct = round((active_days / max(1, days_count)) * 100, 1)
+    # Level calculation: 100 XP per level
+    level = (total_xp // 100) + 1
+    xp_in_level = total_xp % 100
+    next_level_xp = 100
+    level_pct = round((xp_in_level / next_level_xp) * 100, 1)
 
-    # Rank calculation
-    if consistency_pct >= 85:
-        rank = "S-Rank"
-    elif consistency_pct >= 70:
-        rank = "A-Rank"
-    elif consistency_pct >= 50:
-        rank = "B-Rank"
+    # Class Titles
+    if level >= 20:
+        title = "Grandmaster Architect"
+    elif level >= 15:
+        title = "Systems Architect"
+    elif level >= 10:
+        title = "Code Wizard"
+    elif level >= 7:
+        title = "Fullstack Adventurer"
+    elif level >= 4:
+        title = "Apprentice Dev"
     else:
-        rank = "Active"
+        title = "Novice Coder"
 
     return {
         "cur_streak": cur_streak,
         "long_streak": long_streak,
         "active_days": active_days,
-        "total_contribs": total_contribs,
-        "days_count": days_count,
-        "consistency_pct": consistency_pct,
-        "rank": rank,
+        "total_xp": total_xp,
+        "level": level,
+        "title": title,
+        "xp_in_level": xp_in_level,
+        "level_pct": level_pct,
     }
 
 
 def make_svg():
-    stats = load_stats()
-    cur_streak = stats["cur_streak"]
-    long_streak = stats["long_streak"]
-    active_days = stats["active_days"]
-    total_contribs = stats["total_contribs"]
-    consistency_pct = stats["consistency_pct"]
-    rank = stats["rank"]
+    rpg = calculate_rpg_stats()
+    cur_streak = rpg["cur_streak"]
+    long_streak = rpg["long_streak"]
+    active_days = rpg["active_days"]
+    total_xp = rpg["total_xp"]
+    level = rpg["level"]
+    title = rpg["title"]
+    xp_in_level = rpg["xp_in_level"]
+    level_pct = rpg["level_pct"]
 
     # Top Half: Original Info Card Content (Untouched)
     TOP_ROWS = [
@@ -116,7 +124,7 @@ def make_svg():
         ("bul", "SnapFit: AI size recommender platform"),
     ]
 
-    H = 590
+    H = 610
 
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" '
@@ -132,7 +140,7 @@ def make_svg():
     for i, dotcol in enumerate(["#ff5f56", "#ffbd2e", "#27c93f"]):
         parts.append(f'<circle cx="{PAD + i*16}" cy="{TITLEBAR_H/2}" r="5" fill="{dotcol}"/>')
     parts.append(f'<text x="{W/2}" y="{TITLEBAR_H/2 + 4}" fill="{MUTED}" font-size="12" '
-                 f'text-anchor="middle">ninja1029@github: ~$ neofetch</text>')
+                 f'text-anchor="middle">ninja1029@github: ~$ neofetch --rpg</text>')
 
     y = TITLEBAR_H + 30
 
@@ -149,9 +157,9 @@ def make_svg():
                      f'<line x1="{KEY_X+150}" y1="{y-4:.1f}" x2="{W-PAD}" y2="{y-4:.1f}" '
                      f'stroke="{FRAME}" stroke-opacity="0.8"/>')
         elif kind == "sec":
-            title = esc(row[1])
+            title_text = esc(row[1])
             inner = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{SECTION}" font-size="12.5" font-weight="700">'
-                     f'&#8212; {title}</text>'
+                     f'&#8212; {title_text}</text>'
                      f'<line x1="{KEY_X + 12 + len(row[1])*8}" y1="{y-4:.1f}" x2="{W-PAD}" y2="{y-4:.1f}" '
                      f'stroke="{FRAME}" stroke-opacity="0.8"/>')
         elif kind == "kv":
@@ -168,44 +176,53 @@ def make_svg():
         parts.append(f'<g>{inner}</g>')
         y += LINE_H
 
-    # Bottom Half: Streak & Consistency Meter
+    # Bottom Half: RPG Developer Stats & XP Progress
     y += 10
 
-    # — Streak & Consistency section header
-    inner_streak_sec = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{SECTION}" font-size="12.5" font-weight="700">'
-                        f'&#8212; Streak &amp; Consistency</text>'
-                        f'<line x1="{KEY_X + 165}" y1="{y-4:.1f}" x2="{W-PAD}" y2="{y-4:.1f}" '
-                        f'stroke="{FRAME}" stroke-opacity="0.8"/>')
-    parts.append(f'<g>{inner_streak_sec}</g>')
+    # — Developer Level & XP section header
+    inner_rpg_sec = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{SECTION}" font-size="12.5" font-weight="700">'
+                     f'&#8212; Developer Level &amp; XP</text>'
+                     f'<line x1="{KEY_X + 185}" y1="{y-4:.1f}" x2="{W-PAD}" y2="{y-4:.1f}" '
+                     f'stroke="{FRAME}" stroke-opacity="0.8"/>')
+    parts.append(f'<g>{inner_rpg_sec}</g>')
     y += 24
 
-    # Current streak row
-    inner_cur = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">Streak</text>'
-                 f'<text x="{VAL_X}" y="{y:.1f}" fill="{INK}" font-size="12.5">'
-                 f'🔥 {cur_streak} days current  ·  ⚡ {long_streak} days longest</text>')
-    parts.append(f'<g>{inner_cur}</g>')
+    # Level & Title Row
+    inner_lvl = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">Level</text>'
+                 f'<text x="{VAL_X}" y="{y:.1f}" font-size="12.5">'
+                 f'<tspan fill="{ACCENT}" font-weight="700">Level {level}</tspan> '
+                 f'<tspan fill="{PURPLE}">· {title}</tspan></text>')
+    parts.append(f'<g>{inner_lvl}</g>')
     y += 24
 
-    # Consistency Meter Progress Bar
+    # XP Progress Bar
     bar_total_w = 260
-    filled_w = max(10, int(bar_total_w * min(1.0, consistency_pct / 100.0)))
+    filled_w = max(10, int(bar_total_w * (xp_in_level / 100.0)))
+    next_level = level + 1
 
-    inner_meter = (
-        f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">Consistency</text>'
+    inner_xp = (
+        f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">XP Progress</text>'
         f'<rect x="{VAL_X}" y="{y-11:.1f}" width="{bar_total_w}" height="13" rx="3" fill="#21262d"/>'
         f'<rect x="{VAL_X}" y="{y-11:.1f}" width="{filled_w}" height="13" rx="3" fill="{GREEN}"/>'
         f'<text x="{VAL_X + bar_total_w + 14}" y="{y:.1f}" font-size="12.5">'
-        f'<tspan fill="{ACCENT}" font-weight="700">{consistency_pct}%</tspan> '
-        f'<tspan fill="{GOLD}">({rank})</tspan></text>'
+        f'<tspan fill="{INK}">{total_xp:,} XP</tspan> '
+        f'<tspan fill="{GOLD}">({level_pct}% to Lvl {next_level})</tspan></text>'
     )
-    parts.append(f'<g>{inner_meter}</g>')
+    parts.append(f'<g>{inner_xp}</g>')
     y += 24
 
-    # Activity Summary
-    inner_act = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">Activity</text>'
-                 f'<text x="{VAL_X}" y="{y:.1f}" fill="{INK}" font-size="12.5">'
-                 f'{total_contribs:,} contributions across {active_days} active days this year</text>')
-    parts.append(f'<g>{inner_act}</g>')
+    # Active Buff / Streak
+    inner_buff = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">Active Buff</text>'
+                  f'<text x="{VAL_X}" y="{y:.1f}" fill="{INK}" font-size="12.5">'
+                  f'🔥 {cur_streak}-Day Streak (+25% XP Boost)  ·  ⚡ Record: {long_streak} days</text>')
+    parts.append(f'<g>{inner_buff}</g>')
+    y += 24
+
+    # Summary
+    inner_summary = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">Activity</text>'
+                     f'<text x="{VAL_X}" y="{y:.1f}" fill="{INK}" font-size="12.5">'
+                     f'{total_xp:,} total XP earned across {active_days} active days this year</text>')
+    parts.append(f'<g>{inner_summary}</g>')
 
     parts.append("</svg>")
     return "".join(parts)
