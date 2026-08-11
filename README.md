@@ -1,13 +1,8 @@
 <div align="center">
 
-<!-- hero: monochrome ASCII portrait (types in) beside a neofetch-style info
-     panel. regenerate portrait: python scripts/prep_photo.py <photo> &&
-     python scripts/make_ascii_svg.py ; info panel: python scripts/make_info_card.py ; terminal streak card: python scripts/make_terminal_card.py -->
-<img src="./info-card.svg" width="860" alt="Sudharsan M — experience, stack, highlights" />
-
-<br><br>
-
-<img src="./github-terminal.svg" width="860" alt="Sudharsan M — Streak & Contribution Activity" />
+<!-- hero: neofetch-style info & streak terminal card.
+     regenerate card: python scripts/fetch_contributions.py && python scripts/make_info_card.py -->
+<img src="./info-card.svg" width="860" alt="Sudharsan M — Profile, Stack, Streak & Contributions" />
 
 ## Sudharsan M
 
