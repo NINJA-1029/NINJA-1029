@@ -16,7 +16,6 @@ import os
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "info-card.svg")
 DATA_PATH = os.path.join(HERE, "..", "data", "contributions.json")
-STATIC = bool(os.environ.get("STATIC"))
 
 W = 860
 PAD = 20
@@ -85,15 +84,6 @@ def load_stats():
     }
 
 
-def rise(inner, delay):
-    if STATIC:
-        return f"<g>{inner}</g>"
-    return (f'<g opacity="0" transform="translate(0,5)">{inner}'
-            f'<animate attributeName="opacity" from="0" to="1" begin="{delay:.2f}s" dur="0.4s" fill="freeze"/>'
-            f'<animateTransform attributeName="transform" type="translate" from="0 5" to="0 0" '
-            f'begin="{delay:.2f}s" dur="0.4s" fill="freeze" calcMode="spline" keySplines="0.2 0.8 0.2 1"/></g>')
-
-
 def make_svg():
     stats = load_stats()
     cur_streak = stats["cur_streak"]
@@ -145,7 +135,6 @@ def make_svg():
                  f'text-anchor="middle">ninja1029@github: ~$ neofetch</text>')
 
     y = TITLEBAR_H + 30
-    row_idx = 0
 
     # Render Top Half (Original Info Card)
     for row in TOP_ROWS:
@@ -176,11 +165,10 @@ def make_svg():
         else:
             continue
 
-        parts.append(rise(inner, 0.10 + row_idx * 0.04))
-        row_idx += 1
+        parts.append(f'<g>{inner}</g>')
         y += LINE_H
 
-    # Bottom Half: Streak & Consistency Meter (No duplicate header, seamless flow!)
+    # Bottom Half: Streak & Consistency Meter
     y += 10
 
     # — Streak & Consistency section header
@@ -188,22 +176,19 @@ def make_svg():
                         f'&#8212; Streak &amp; Consistency</text>'
                         f'<line x1="{KEY_X + 165}" y1="{y-4:.1f}" x2="{W-PAD}" y2="{y-4:.1f}" '
                         f'stroke="{FRAME}" stroke-opacity="0.8"/>')
-    parts.append(rise(inner_streak_sec, 0.10 + row_idx * 0.04))
-    row_idx += 1
+    parts.append(f'<g>{inner_streak_sec}</g>')
     y += 24
 
-    # Current streak row + streak bar
-    bar_w = int(200 * min(1.0, cur_streak / max(1, long_streak)))
+    # Current streak row
     inner_cur = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">Streak</text>'
                  f'<text x="{VAL_X}" y="{y:.1f}" fill="{INK}" font-size="12.5">'
                  f'🔥 {cur_streak} days current  ·  ⚡ {long_streak} days longest</text>')
-    parts.append(rise(inner_cur, 0.10 + row_idx * 0.04))
-    row_idx += 1
+    parts.append(f'<g>{inner_cur}</g>')
     y += 24
 
     # Consistency Meter Progress Bar
     bar_total_w = 260
-    filled_w = int(bar_total_w * min(1.0, consistency_pct / 100.0))
+    filled_w = max(10, int(bar_total_w * min(1.0, consistency_pct / 100.0)))
 
     inner_meter = (
         f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">Consistency</text>'
@@ -213,15 +198,14 @@ def make_svg():
         f'<tspan fill="{ACCENT}" font-weight="700">{consistency_pct}%</tspan> '
         f'<tspan fill="{GOLD}">({rank})</tspan></text>'
     )
-    parts.append(rise(inner_meter, 0.10 + row_idx * 0.04))
-    row_idx += 1
+    parts.append(f'<g>{inner_meter}</g>')
     y += 24
 
     # Activity Summary
     inner_act = (f'<text x="{KEY_X}" y="{y:.1f}" fill="{KEY}" font-size="12.5" font-weight="700">Activity</text>'
                  f'<text x="{VAL_X}" y="{y:.1f}" fill="{INK}" font-size="12.5">'
                  f'{total_contribs:,} contributions across {active_days} active days this year</text>')
-    parts.append(rise(inner_act, 0.10 + row_idx * 0.04))
+    parts.append(f'<g>{inner_act}</g>')
 
     parts.append("</svg>")
     return "".join(parts)
