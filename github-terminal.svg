@@ -295,7 +295,7 @@ font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
 <line x1="92" y1="324" x2="840" y2="324" stroke="#30363d" stroke-opacity=".8"/>
 
 <text x="20" y="351" fill="#ffa657" font-size="12.5" font-weight="700">Total Contributions</text>
-<text x="170" y="351" fill="#c9d1d9" font-size="12.5">697</text>
+<text x="170" y="351" fill="#c9d1d9" font-size="12.5">708</text>
 <text x="20" y="373" fill="#ffa657" font-size="12.5" font-weight="700">Active Days</text>
 <text x="170" y="373" fill="#c9d1d9" font-size="12.5">73 days this year</text>
 </svg>
