@@ -1,26 +1,26 @@
 {
   "username": "NINJA-1029",
-  "generated_at": "2026-08-30T03:56:58Z",
+  "generated_at": "2026-08-31T04:00:14Z",
   "range": {
     "start": "2025-08-31",
+    "end": "2026-08-31"
+  },
+  "total_contributions": 857,
+  "active_days": 92,
+  "avg_per_active_day": 9.3,
+  "current_streak": {
+    "length": 68,
+    "start": "2026-06-24",
     "end": "2026-08-30"
   },
-  "total_contributions": 831,
-  "active_days": 91,
-  "avg_per_active_day": 9.1,
-  "current_streak": {
-    "length": 67,
-    "start": "2026-06-24",
-    "end": "2026-08-29"
-  },
   "longest_streak": {
-    "length": 67,
+    "length": 68,
     "start": "2026-06-24",
-    "end": "2026-08-29"
+    "end": "2026-08-30"
   },
   "best_day": {
     "date": "2026-06-27",
-    "count": 91
+    "count": 92
   },
   "monthly": [
     {
@@ -65,7 +65,7 @@
     },
     {
       "month": "2026-06",
-      "total": 208
+      "total": 209
     },
     {
       "month": "2026-07",
@@ -73,7 +73,7 @@
     },
     {
       "month": "2026-08",
-      "total": 195
+      "total": 220
     }
   ],
   "days": [
@@ -1279,7 +1279,7 @@
     },
     {
       "date": "2026-06-27",
-      "count": 91
+      "count": 92
     },
     {
       "date": "2026-06-28",
@@ -1523,7 +1523,7 @@
     },
     {
       "date": "2026-08-27",
-      "count": 4
+      "count": 21
     },
     {
       "date": "2026-08-28",
@@ -1535,6 +1535,10 @@
     },
     {
       "date": "2026-08-30",
+      "count": 8
+    },
+    {
+      "date": "2026-08-31",
       "count": 0
     }
   ]
